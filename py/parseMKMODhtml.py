@@ -6,6 +6,13 @@ Created on Thu Aug 30 10:33:55 2018
 """
 # FUNCTIONS    
 from itertools import product
+# Export to pickle
+import pickle
+import matplotlib.pyplot as plt
+
+plt.style.use('seaborn-talk')
+plt.style.use('bmh')
+
 def table_to_2d(table_tag):
     '''
     from 
@@ -102,11 +109,12 @@ with open(file,'r') as f:
     soup = BeautifulSoup(f.read(),'lxml')
     
 d={}
+# ----
 # Parse tables to arbitrarily index dataframe
 for i,table in enumerate(soup.find_all('table')):
     d['Table {}'.format(i+1)] = pd.DataFrame(table_to_2d(table))
-    
-
+#---    
+# Parse arrays to dataframes 
 d2={}
 for key in d.keys():
     if key not in 'Table 1':
@@ -124,17 +132,26 @@ for key in d.keys():
             
             # Place in new dataframe
             df2 = pd.DataFrame(index=index, columns=header[icol+1:], data=df.iloc[irow:,icol+1:].values)
+            df2.index.name=None
             df2 = df2.astype(float)
         except:
             print('{} failed to simplify'.format(key))
             df2 = df
             
         d2[key] = df2
+# Table 14 and 3 do not parse correctly
+for t in [3,14]:
+    df = d2['Table {}'.format(t)]
+    df.set_index(0,inplace=True,drop=True)
+    df.index.name='Entity'
+    df.columns=df.iloc[0,:]
+    df.drop(index='Entity',inplace=True)
+    d2['Table {}'.format(t)] = df.astype(float)
+    
 
-import matplotlib.pyplot as plt
-
-plt.style.use('seaborn-talk')
-plt.style.use('bmh')
 
 df = d2['Table 2']
-df2=df.filter(regex='Efficiency|CIR|Irrigation|Soil|Applied')
+df2=df.filter(regex='CIR|Irrigation|Diverted')
+
+with open(r'D:/ESRP/RechargeData_Alex/MKMOD_2x/ESPAM2x_201709.pkl','wb') as fout:
+    pickle.dump(d2,fout,protocol=pickle.HIGHEST_PROTOCOL)
